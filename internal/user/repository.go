@@ -1,6 +1,7 @@
 package user
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"strings"
@@ -11,12 +12,12 @@ import (
 )
 
 type Repository interface {
-	Create(user *domain.User) error
-	GetAll(filters Filters, offset, limit int) ([]domain.User, error)
-	Get(id string) (*domain.User, error)
-	Delete(id string) error
-	Update(id string, user *UpdateUser) error
-	Count(filters Filters) (int, error)
+	Create(ctx context.Context, user *domain.User) error
+	GetAll(ctx context.Context, filters Filters, offset, limit int) ([]domain.User, error)
+	Get(ctx context.Context, id string) (*domain.User, error)
+	Delete(ctx context.Context, id string) error
+	Update(ctx context.Context, id string, user *UpdateUser) error
+	Count(ctx context.Context, filters Filters) (int, error)
 }
 
 type repository struct {
@@ -32,10 +33,10 @@ func NewRepository(log *log.Logger, db *gorm.DB) Repository {
 	}
 }
 
-func (r *repository) Create(user *domain.User) error {
+func (r *repository) Create(ctx context.Context, user *domain.User) error {
 
-	if err := r.db.Create(user).Error; err != nil {
-		r.log.Println("Repository ->", err)
+	if err := r.db.WithContext(ctx).Create(user).Error; err != nil {
+		r.log.Println("Error-Repository CreateUser ->", err)
 		return err
 	}
 
@@ -44,42 +45,42 @@ func (r *repository) Create(user *domain.User) error {
 	return nil
 }
 
-func (r *repository) GetAll(filters Filters, offset, limit int) ([]domain.User, error) {
+func (r *repository) GetAll(ctx context.Context, filters Filters, offset, limit int) ([]domain.User, error) {
 
-	r.log.Println("GetAll user Repository")
 	var users []domain.User
 
-	tx := r.db.Model(&users)
+	tx := r.db.WithContext(ctx).Model(&users)
 	tx = applyFilters(tx, filters)
 	tx = tx.Limit(limit).Offset(offset)
 
 	result := tx.Order("created_at desc").Find(&users)
 
 	if result.Error != nil {
+		r.log.Println("Error-Repository GetAllUser ->", result.Error)
 		return nil, result.Error
 	}
 
 	return users, nil
 }
 
-func (r *repository) Get(id string) (*domain.User, error) {
+func (r *repository) Get(ctx context.Context, id string) (*domain.User, error) {
 
-	r.log.Println("Get user Repository")
 	user := domain.User{ID: id}
 
-	if err := r.db.First(&user).Error; err != nil {
+	if err := r.db.WithContext(ctx).First(&user).Error; err != nil {
+		r.log.Println("Error-Repository GetUser ->", err)
 		return nil, err
 	}
 
 	return &user, nil
 }
 
-func (r *repository) Delete(id string) error {
+func (r *repository) Delete(ctx context.Context, id string) error {
 
-	r.log.Println("Delete user Repository")
 	user := domain.User{ID: id}
 
-	if err := r.db.Delete(&user).Error; err != nil {
+	if err := r.db.WithContext(ctx).Delete(&user).Error; err != nil {
+		r.log.Println("Error-Repository DeleteUser ->", err)
 		return err
 	}
 
@@ -88,9 +89,7 @@ func (r *repository) Delete(id string) error {
 	return nil
 }
 
-func (r *repository) Update(id string, user *UpdateUser) error {
-
-	r.log.Println("Udate user Repository")
+func (r *repository) Update(ctx context.Context, id string, user *UpdateUser) error {
 
 	values := make(map[string]interface{})
 
@@ -110,20 +109,23 @@ func (r *repository) Update(id string, user *UpdateUser) error {
 		values["phone"] = *user.Phone
 	}
 
-	if err := r.db.Model(&domain.User{}).Where("id = ?", id).Updates(values).Error; err != nil {
+	if err := r.db.WithContext(ctx).Model(&domain.User{}).Where("id = ?", id).Updates(values).Error; err != nil {
+		r.log.Println("Error-Repository UdateUser ->", err)
+
 		return err
 	}
 
 	return nil
 }
 
-func (r *repository) Count(filters Filters) (int, error) {
+func (r *repository) Count(ctx context.Context, filters Filters) (int, error) {
 
 	var count int64
-	tx := r.db.Model(domain.User{})
+	tx := r.db.WithContext(ctx).Model(domain.User{})
 	tx = applyFilters(tx, filters)
 
 	if err := tx.Count(&count).Error; err != nil {
+		r.log.Println("Error-Repository CountUser ->", err)
 		return 0, err
 	}
 

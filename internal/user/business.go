@@ -1,6 +1,7 @@
 package user
 
 import (
+	"context"
 	"log"
 
 	"github.com/jnka9755/go-05DOMAIN/domain"
@@ -8,12 +9,12 @@ import (
 
 type (
 	Business interface {
-		Create(request *CreateReq) (*domain.User, error)
-		GetAll(filters Filters, offset, limit int) ([]domain.User, error)
-		Get(id string) (*domain.User, error)
-		Delete(id string) error
-		Update(id string, request *UpdateReq) error
-		Count(filters Filters) (int, error)
+		Create(ctx context.Context, request *CreateReq) (*domain.User, error)
+		GetAll(ctx context.Context, filters Filters, offset, limit int) ([]domain.User, error)
+		Get(ctx context.Context, id string) (*domain.User, error)
+		Delete(ctx context.Context, id string) error
+		Update(ctx context.Context, id string, request *UpdateReq) error
+		Count(ctx context.Context, filters Filters) (int, error)
 	}
 
 	business struct {
@@ -41,7 +42,7 @@ func NewBusiness(log *log.Logger, repository Repository) Business {
 	}
 }
 
-func (b business) Create(request *CreateReq) (*domain.User, error) {
+func (b business) Create(ctx context.Context, request *CreateReq) (*domain.User, error) {
 
 	user := domain.User{
 		FirstName: request.FirstName,
@@ -50,18 +51,16 @@ func (b business) Create(request *CreateReq) (*domain.User, error) {
 		Phone:     request.Phone,
 	}
 
-	b.log.Println("Create user Business")
-	if err := b.repository.Create(&user); err != nil {
+	if err := b.repository.Create(ctx, &user); err != nil {
 		return nil, err
 	}
 
 	return &user, nil
 }
 
-func (b business) GetAll(filters Filters, offset, limit int) ([]domain.User, error) {
+func (b business) GetAll(ctx context.Context, filters Filters, offset, limit int) ([]domain.User, error) {
 
-	b.log.Println("GetAll user Business")
-	users, err := b.repository.GetAll(filters, offset, limit)
+	users, err := b.repository.GetAll(ctx, filters, offset, limit)
 
 	if err != nil {
 		return nil, err
@@ -70,10 +69,9 @@ func (b business) GetAll(filters Filters, offset, limit int) ([]domain.User, err
 	return users, nil
 }
 
-func (b business) Get(id string) (*domain.User, error) {
+func (b business) Get(ctx context.Context, id string) (*domain.User, error) {
 
-	b.log.Println("Get user Business")
-	user, err := b.repository.Get(id)
+	user, err := b.repository.Get(ctx, id)
 
 	if err != nil {
 		return nil, err
@@ -82,15 +80,12 @@ func (b business) Get(id string) (*domain.User, error) {
 	return user, nil
 }
 
-func (b business) Delete(id string) error {
+func (b business) Delete(ctx context.Context, id string) error {
 
-	b.log.Println("Delete user Business")
-	return b.repository.Delete(id)
+	return b.repository.Delete(ctx, id)
 }
 
-func (b business) Update(id string, request *UpdateReq) error {
-
-	b.log.Println("Update user Business")
+func (b business) Update(ctx context.Context, id string, request *UpdateReq) error {
 
 	user := UpdateUser{
 		FirstName: request.FirstName,
@@ -99,9 +94,9 @@ func (b business) Update(id string, request *UpdateReq) error {
 		Phone:     request.Phone,
 	}
 
-	return b.repository.Update(id, &user)
+	return b.repository.Update(ctx, id, &user)
 }
 
-func (b business) Count(filters Filters) (int, error) {
-	return b.repository.Count(filters)
+func (b business) Count(ctx context.Context, filters Filters) (int, error) {
+	return b.repository.Count(ctx, filters)
 }
