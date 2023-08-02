@@ -16,7 +16,7 @@ type Repository interface {
 	GetAll(ctx context.Context, filters Filters, offset, limit int) ([]domain.User, error)
 	Get(ctx context.Context, id string) (*domain.User, error)
 	Delete(ctx context.Context, id string) error
-	Update(ctx context.Context, id string, user *UpdateUser) error
+	Update(ctx context.Context, user *UpdateUser) error
 	Count(ctx context.Context, filters Filters) (int, error)
 }
 
@@ -69,6 +69,11 @@ func (r *repository) Get(ctx context.Context, id string) (*domain.User, error) {
 
 	if err := r.db.WithContext(ctx).First(&user).Error; err != nil {
 		r.log.Println("Error-Repository GetUser ->", err)
+
+		if err == gorm.ErrRecordNotFound {
+			return nil, ErrNotFound{id}
+		}
+
 		return nil, err
 	}
 
@@ -79,9 +84,16 @@ func (r *repository) Delete(ctx context.Context, id string) error {
 
 	user := domain.User{ID: id}
 
-	if err := r.db.WithContext(ctx).Delete(&user).Error; err != nil {
-		r.log.Println("Error-Repository DeleteUser ->", err)
-		return err
+	result := r.db.WithContext(ctx).Delete(&user)
+
+	if result.Error != nil {
+		r.log.Println("Error-Repository DeleteUser ->", result.Error)
+		return result.Error
+	}
+
+	if result.RowsAffected == 0 {
+		r.log.Printf("User with ID -> '%s' doesn't exist", user.ID)
+		return ErrNotFound{id}
 	}
 
 	r.log.Println("Repository -> Delete user with id: ", user.ID)
@@ -89,7 +101,7 @@ func (r *repository) Delete(ctx context.Context, id string) error {
 	return nil
 }
 
-func (r *repository) Update(ctx context.Context, id string, user *UpdateUser) error {
+func (r *repository) Update(ctx context.Context, user *UpdateUser) error {
 
 	values := make(map[string]interface{})
 
@@ -109,10 +121,16 @@ func (r *repository) Update(ctx context.Context, id string, user *UpdateUser) er
 		values["phone"] = *user.Phone
 	}
 
-	if err := r.db.WithContext(ctx).Model(&domain.User{}).Where("id = ?", id).Updates(values).Error; err != nil {
-		r.log.Println("Error-Repository UdateUser ->", err)
+	result := r.db.WithContext(ctx).Model(&domain.User{}).Where("id = ?", user.ID).Updates(values)
 
-		return err
+	if result.Error != nil {
+		r.log.Println("Error-Repository UdateUser ->", result.Error)
+		return result.Error
+	}
+
+	if result.RowsAffected == 0 {
+		r.log.Printf("User with ID -> '%s' doesn't exist", user.ID)
+		return ErrNotFound{user.ID}
 	}
 
 	return nil

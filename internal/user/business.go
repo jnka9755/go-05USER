@@ -13,7 +13,7 @@ type (
 		GetAll(ctx context.Context, filters Filters, offset, limit int) ([]domain.User, error)
 		Get(ctx context.Context, id string) (*domain.User, error)
 		Delete(ctx context.Context, id string) error
-		Update(ctx context.Context, id string, request *UpdateReq) error
+		Update(ctx context.Context, request *UpdateReq) error
 		Count(ctx context.Context, filters Filters) (int, error)
 	}
 
@@ -28,6 +28,7 @@ type (
 	}
 
 	UpdateUser struct {
+		ID        string
 		FirstName *string
 		LastName  *string
 		Email     *string
@@ -85,16 +86,17 @@ func (b business) Delete(ctx context.Context, id string) error {
 	return b.repository.Delete(ctx, id)
 }
 
-func (b business) Update(ctx context.Context, id string, request *UpdateReq) error {
+func (b business) Update(ctx context.Context, request *UpdateReq) error {
 
 	user := UpdateUser{
+		ID:        request.ID,
 		FirstName: request.FirstName,
 		LastName:  request.LastName,
 		Email:     request.Email,
 		Phone:     request.Phone,
 	}
 
-	return b.repository.Update(ctx, id, &user)
+	return b.repository.Update(ctx, &user)
 }
 
 func (b business) Count(ctx context.Context, filters Filters) (int, error) {
