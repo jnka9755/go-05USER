@@ -49,13 +49,6 @@ type (
 		ID string
 	}
 
-	Response struct {
-		Status int         `json:"status"`
-		Data   interface{} `json:"data,omitempty"`
-		Err    string      `json:"error,omitempty"`
-		Meta   *meta.Meta  `json:"meta,omitempty"`
-	}
-
 	Config struct {
 		LimPageDef string
 	}
@@ -135,11 +128,6 @@ func makeGetAllEndpoint(b Business, config Config) Controller {
 		users, err := b.GetAll(ctx, filters, meta.Offset(), meta.Limit())
 
 		if err != nil {
-
-			if errors.As(err, &ErrNotFound{}) {
-				return nil, response.NotFound(err.Error())
-			}
-
 			return nil, response.InternalServerError(err.Error())
 		}
 
