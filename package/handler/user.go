@@ -3,8 +3,10 @@ package handler
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
+	"os"
 	"strconv"
 
 	"github.com/go-kit/kit/endpoint"
@@ -61,6 +63,10 @@ func NewUserHTTPServer(ctx context.Context, endpoints user.Endpoints) http.Handl
 
 func decodeCreateUser(_ context.Context, r *http.Request) (interface{}, error) {
 
+	if err := authorization(r.Header.Get("Authorization")); err != nil {
+		return nil, response.Forbidden(err.Error())
+	}
+
 	var req user.CreateReq
 
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
@@ -72,6 +78,10 @@ func decodeCreateUser(_ context.Context, r *http.Request) (interface{}, error) {
 
 func decodeGetUser(_ context.Context, r *http.Request) (interface{}, error) {
 
+	if err := authorization(r.Header.Get("Authorization")); err != nil {
+		return nil, response.Forbidden(err.Error())
+	}
+
 	p := mux.Vars(r)
 	req := user.GetReq{
 		ID: p["id"],
@@ -81,6 +91,10 @@ func decodeGetUser(_ context.Context, r *http.Request) (interface{}, error) {
 }
 
 func decodeGetAllUser(_ context.Context, r *http.Request) (interface{}, error) {
+
+	if err := authorization(r.Header.Get("Authorization")); err != nil {
+		return nil, response.Forbidden(err.Error())
+	}
 
 	v := r.URL.Query()
 
@@ -99,6 +113,10 @@ func decodeGetAllUser(_ context.Context, r *http.Request) (interface{}, error) {
 
 func decodeUpdateUser(_ context.Context, r *http.Request) (interface{}, error) {
 
+	if err := authorization(r.Header.Get("Authorization")); err != nil {
+		return nil, response.Forbidden(err.Error())
+	}
+
 	var req user.UpdateReq
 
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
@@ -112,6 +130,10 @@ func decodeUpdateUser(_ context.Context, r *http.Request) (interface{}, error) {
 }
 
 func decodeDeleteUser(_ context.Context, r *http.Request) (interface{}, error) {
+
+	if err := authorization(r.Header.Get("Authorization")); err != nil {
+		return nil, response.Forbidden(err.Error())
+	}
 
 	p := mux.Vars(r)
 	req := user.DeleteReq{
@@ -133,4 +155,13 @@ func encodeError(_ context.Context, err error, w http.ResponseWriter) {
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
 	w.WriteHeader(r.StatusCode())
 	_ = json.NewEncoder(w).Encode(r)
+}
+
+func authorization(token string) error {
+
+	if token != os.Getenv("TOKEN") {
+		return errors.New("Invalid token")
+	}
+
+	return nil
 }
